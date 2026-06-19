@@ -7,7 +7,7 @@
 [![No account](https://img.shields.io/badge/account-not%20required-22C55E?style=flat-square)]()
 [![MIT License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**Live:** _add your Vercel URL here once deployed_
+**Live:** https://looplens-project.vercel.app
 **Repo:** https://github.com/Virerra/looplens
 
 ## What it does
