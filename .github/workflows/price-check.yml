@@ -1,0 +1,61 @@
+name: Weekly price check
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # also allow manual trigger
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run price sync script
+        run: node scripts/sync-prices.js
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet src/data/models.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "## Price diff:" >> $GITHUB_STEP_SUMMARY
+            git diff src/data/models.json >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Open PR if prices changed
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: sync model prices from LiteLLM'
+          branch: automated/price-sync
+          title: '🤖 Weekly price sync — review before merging'
+          body: |
+            This PR was opened automatically by the weekly price-check workflow.
+
+            It updates `src/data/models.json` with any prices that changed in the
+            [LiteLLM pricing file](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json).
+
+            **Please review the diff carefully before merging:**
+            - Do the new prices match the provider's official pricing pages?
+            - Were any models added or removed from LiteLLM that we should reflect?
+            - Update `_meta.verified` date once confirmed.
+
+            Provider pricing pages to cross-check:
+            - Anthropic: https://www.anthropic.com/pricing
+            - OpenAI: https://openai.com/api/pricing
+            - Google: https://ai.google.dev/gemini-api/docs/pricing
+            - DeepSeek: https://platform.deepseek.com/usage
+          labels: automated, pricing
